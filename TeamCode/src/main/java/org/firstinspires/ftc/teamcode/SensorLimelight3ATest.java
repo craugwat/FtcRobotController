@@ -32,24 +32,16 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.MalformedURLException;
 
 
 /*
@@ -98,219 +90,41 @@ public class SensorLimelight3ATest extends LinearOpMode {
 //        telemetry.addData(">", limelight.getConnectionInfo());
         telemetry.update();
 
+//        try {
+//            portForward.portForward();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//        telemetry.addData(">", "port forward started");
+//        telemetry.update();
 
         waitForStart();
 
-        // caw test begin
 
-        FtcDashboard dashboard = FtcDashboard.getInstance();
+        LimeLightImageTools llIt = new LimeLightImageTools(limelight);
 
-        String snapShotName = "craug";
+//        try {
+//            llIt.getIt();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+
+//    while (opModeIsActive()){
+//        JSONObject response = llIt.sendGetRequest2();
+//        telemetry.addData("llIt>", response);
+//        telemetry.update();
+ //   }
+
         while (opModeIsActive()) {
-            boolean captured = limelight.captureSnapshot(snapShotName);
-            telemetry.addData(">snapshot?", captured);
-
-            JSONObject obj = snapshotManifest();
-            String snapShotFullName ="";
-
-            if (obj != null) {
-                try {
-                    snapShotFullName = findFullName(obj, snapShotName);
-                } catch (JSONException e) {
-                    snapShotFullName = "";
-                }
-                if (snapShotFullName != "") {
-                    Bitmap snapShot = getBitmapFromSnapShot(snapShotFullName);
-                    if (snapShot != null) {
-                        dashboard.sendImage(snapShot);
-                        limelight.deleteSnapshots();
-                    }
-                }
-            }
-
-            telemetry.addData(">name ", snapShotName);
-            telemetry.addData(">", obj);
+            llIt.SendNewSnapshotToDashboard();
             telemetry.update();
-            sleep(10);
+            sleep(100);
         }
-
-        sleep(2000);
-
-//        // caw test end
 //
 //
 //        while (opModeIsActive()) {
-//            LLStatus status = limelight.getStatus();
-//            telemetry.addData("Name", "%s",
-//                    status.getName());
-//            telemetry.addData("LL", "Temp: %.1fC, CPU: %.1f%%, FPS: %d",
-//                    status.getTemp(), status.getCpu(),(int)status.getFps());
-//            telemetry.addData("Pipeline", "Index: %d, Type: %s",
-//                    status.getPipelineIndex(), status.getPipelineType());
-//
-//            LLResult result = limelight.getLatestResult();
-//            if (result != null) {
-//                // Access general information
-//                Pose3D botpose = result.getBotpose();
-//                double captureLatency = result.getCaptureLatency();
-//                double targetingLatency = result.getTargetingLatency();
-//                double parseLatency = result.getParseLatency();
-//                telemetry.addData("LL Latency", captureLatency + targetingLatency);
-//                telemetry.addData("Parse Latency", parseLatency);
-//                telemetry.addData("PythonOutput", java.util.Arrays.toString(result.getPythonOutput()));
-//
-//                if (result.isValid()) {
-//                    telemetry.addData("tx", result.getTx());
-//                    telemetry.addData("txnc", result.getTxNC());
-//                    telemetry.addData("ty", result.getTy());
-//                    telemetry.addData("tync", result.getTyNC());
-//
-//                    telemetry.addData("Botpose", botpose.toString());
-//
-//                    // Access barcode results
-//                    List<LLResultTypes.BarcodeResult> barcodeResults = result.getBarcodeResults();
-//                    for (LLResultTypes.BarcodeResult br : barcodeResults) {
-//                        telemetry.addData("Barcode", "Data: %s", br.getData());
-//                    }
-//
-//                    // Access classifier results
-//                    List<LLResultTypes.ClassifierResult> classifierResults = result.getClassifierResults();
-//                    for (LLResultTypes.ClassifierResult cr : classifierResults) {
-//                        telemetry.addData("Classifier", "Class: %s, Confidence: %.2f", cr.getClassName(), cr.getConfidence());
-//                    }
-//
-//                    // Access detector results
-//                    List<LLResultTypes.DetectorResult> detectorResults = result.getDetectorResults();
-//                    for (LLResultTypes.DetectorResult dr : detectorResults) {
-//                        telemetry.addData("Detector", "Class: %s, Area: %.2f", dr.getClassName(), dr.getTargetArea());
-//                    }
-//
-//                    // Access fiducial results
-//                    List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-//                    for (LLResultTypes.FiducialResult fr : fiducialResults) {
-//                        telemetry.addData("Fiducial", "ID: %d, Family: %s, X: %.2f, Y: %.2f", fr.getFiducialId(), fr.getFamily(),fr.getTargetXDegrees(), fr.getTargetYDegrees());
-//                    }
-//
-//                    // Access color results
-//                    List<LLResultTypes.ColorResult> colorResults = result.getColorResults();
-//                    for (LLResultTypes.ColorResult cr : colorResults) {
-//                        telemetry.addData("Color", "X: %.2f, Y: %.2f", cr.getTargetXDegrees(), cr.getTargetYDegrees());
-//                    }
-//                }
-//            } else {
-//                telemetry.addData("Limelight", "No data available");
-//            }
-//
-//            telemetry.update();
+//            llIt.streamToDashboard();
 //        }
-//        limelight.stop();
     }
-
-    public JSONObject sendGetRequest (String endpoint) {
-
-        // todo  fix this baseUrl (debug and see what it is in the Limelight3A.java
-        String baseUrl = "http://172.29.0.1:5807";
-        int GETREQUEST_TIMEOUT = 100;
-        int CONNECTION_TIMEOUT = 100;
-
-        HttpURLConnection connection = null;
-        try {
-            String urlString = baseUrl + endpoint;
-            URL url = new URL(urlString);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setReadTimeout(GETREQUEST_TIMEOUT);
-            connection.setConnectTimeout(CONNECTION_TIMEOUT);
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                String response = readResponse(connection);
-                if (isValidJson(response)) {
-                    return new JSONObject(response);
-                } else{
-                    JSONObject jsonObject = new JSONObject();
-                    JSONArray jsonArray = new JSONArray(response);
-                    jsonObject.put("fileNames", jsonArray);
-                    return jsonObject;
-                }
-            } else {
-                System.out.println("HTTP GET Error: " + responseCode);
-            }
-        } catch (Exception e) {
-            //e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Gets the manifest of available snapshots.
-     * This method is not necessary for FTC teams. Marked as private
-     *
-     * @return A JSONObject containing the snapshot manifest.
-     */
-    private JSONObject snapshotManifest() {
-        return sendGetRequest("/snapshotmanifest");
-    }
-
-    private String readResponse(HttpURLConnection connection) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        StringBuilder response = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
-        }
-        reader.close();
-
-        return response.toString();
-    }
-
-    public static boolean isValidJson(String jsonString) {
-        try {
-            new JSONObject(jsonString);
-            return true;
-        } catch (JSONException e) {
-            return false;
-        }
-    }
-
-    public Bitmap getBitmapFromSnapShot(String fileName) {
-        String imageUrl = "http://172.29.0.1:5801/snapshots/" + fileName; // Replace with your image URL
-
-        try {
-            URL url = new URL(imageUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            Bitmap myBitmap = BitmapFactory.decodeStream(input);
-            return myBitmap;
-        } catch (IOException e) {
-            // Log exception
-            return null;
-        }
-    }
-
-    // find the first occurrence  of a string name
-    // return the full string name, limelight adds some characters!
-    String findFullName(JSONObject obj, String snapShotName) throws JSONException {
-        try {
-        JSONArray jsonArray = obj.getJSONArray("fileNames");
-        for (int i = 0; i < jsonArray.length(); i++) {
-            String str = jsonArray.getString(i);
-            if (str.contains(snapShotName)) {
-                return str;
-            }
-        }
-        } catch (JSONException e) {
-            return "";
-        }
-        return "";
-    }
-
 }
 
