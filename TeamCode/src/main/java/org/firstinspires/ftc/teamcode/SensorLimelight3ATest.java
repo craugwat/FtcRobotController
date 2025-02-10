@@ -32,13 +32,21 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 package org.firstinspires.ftc.teamcode;
 
+import android.graphics.Bitmap;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.RobotLog;
 
+import org.firstinspires.ftc.robotcore.external.stream.CameraStreamClient;
+import org.firstinspires.ftc.robotcore.external.stream.CameraStreamServer;
+import org.firstinspires.ftc.robotcore.external.stream.CameraStreamSource;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.opencv.videoio.VideoCapture;
+import org.openftc.easyopencv.OpenCvCamera;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -103,28 +111,33 @@ public class SensorLimelight3ATest extends LinearOpMode {
 
         LimeLightImageTools llIt = new LimeLightImageTools(limelight);
 
-//        try {
-//            llIt.getIt();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
+
+//        while (opModeIsActive()) {
+//            llIt.SendNewSnapshotToDashboard();
+//            telemetry.update();
+//            sleep(100);
 //        }
 
-//    while (opModeIsActive()){
-//        JSONObject response = llIt.sendGetRequest2();
-//        telemetry.addData("llIt>", response);
-//        telemetry.update();
- //   }
-
-        while (opModeIsActive()) {
-            llIt.SendNewSnapshotToDashboard();
-            telemetry.update();
-            sleep(100);
-        }
-//
-//
 //        while (opModeIsActive()) {
 //            llIt.streamToDashboard();
+//            sleep(100);
 //        }
+
+        int frames = 0;
+        int droppedFrames = 0;
+        while (opModeIsActive()) {
+            Bitmap bmp = llIt.decodeMultipartImage("http://172.29.0.1:5800");
+            if (bmp != null) {
+                FtcDashboard.getInstance().sendImage(bmp);
+                frames++;
+            } else {
+                droppedFrames++;
+            }
+            RobotLog.d("total frames = " + frames +"   Dropped frame = "+ droppedFrames);
+
+            sleep(100);
+        }
+
     }
 }
 
