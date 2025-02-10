@@ -50,6 +50,7 @@ import org.openftc.easyopencv.OpenCvCamera;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Timer;
 
 
 /*
@@ -125,6 +126,7 @@ public class SensorLimelight3ATest extends LinearOpMode {
 
         int frames = 0;
         int droppedFrames = 0;
+        long startTime = System.nanoTime();
         while (opModeIsActive()) {
             Bitmap bmp = llIt.decodeMultipartImage("http://172.29.0.1:5800");
             if (bmp != null) {
@@ -133,7 +135,11 @@ public class SensorLimelight3ATest extends LinearOpMode {
             } else {
                 droppedFrames++;
             }
-            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames);
+            long currentTime = System.nanoTime();
+            double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
+            double frameRate =  (double)frames/elapsedTimeSeconds;
+
+            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
 
 //            sleep(10);
         }

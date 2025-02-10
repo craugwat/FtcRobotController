@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.io.*;
 import java.nio.charset.Charset;
@@ -335,10 +336,7 @@ public class LimeLightImageTools {
 
 
     // ***  Begin attempt for more optimized stream access  ***
-    // Does not work once we get to the actual image data, it is converted
-    // from bytes to strings and non printable characters are messed up.
-    // the do not convert back the same when passed to BitmapFactory
-    public  Bitmap decodeMultipartImage(String urlString)  {
+    private HttpURLConnection openConnection(String urlString) {
         int GETREQUEST_TIMEOUT = 100;
         int CONNECTION_TIMEOUT = 100;
 
@@ -349,23 +347,54 @@ public class LimeLightImageTools {
             connection.setRequestMethod("GET");
             connection.setReadTimeout(GETREQUEST_TIMEOUT);
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
-            InputStream inputStream = connection.getInputStream();
-            String contentType = connection.getHeaderField("Content-Type");
-            String boundary = extractBoundary(contentType);
-            if (boundary == null) {
-                RobotLog.d("LLIT boundary is NULL Exception - ");
-                return null;
+            return connection;
+        } catch (Exception e) {
+            RobotLog.d("LLIT openConnection Exception - " + e );
+        }
+        return null;
+    }
+
+    HttpURLConnection connection = null;
+    public  Bitmap decodeMultipartImage(String urlString)  {
+        int GETREQUEST_TIMEOUT = 100;
+        int CONNECTION_TIMEOUT = 100;
+
+        if (connection == null) {
+            connection = openConnection(urlString);
+        }
+        try {
+//            URL url = new URL(urlString);
+//            connection = (HttpURLConnection) url.openConnection();
+//            connection.setRequestMethod("GET");
+//            connection.setReadTimeout(GETREQUEST_TIMEOUT);
+//            connection.setConnectTimeout(CONNECTION_TIMEOUT);
+            if (connection != null) {
+                InputStream inputStream = connection.getInputStream();
+                String contentType = connection.getHeaderField("Content-Type");
+                String boundary = extractBoundary(contentType);
+                if (boundary == null) {
+                    RobotLog.d("LLIT boundary is NULL Exception - ");
+                    return null;
+                }
+                return readImageFromStream(inputStream, boundary);
             }
-            return readImageFromStream(inputStream, boundary);
         } catch (Exception e) {
             RobotLog.d("LLIT decodeMultipartImage Exception - " + e );
             return null;
         } finally {
+            //  frame rate can be increased by not closing the conneciton, but
+            // the server keeps sending images and they pile up in the inputStream causing lag!
+            // quick test, not closing doubled frame rate, but caused 2 seconds of lag.
+            // this also caused dropped frames, beacuse code is not searching for the
+            // begining of the header each time through.
+            // could check the inputStream size and skip towards the end and look for the header
+            // info to get the last full jpg that is in the buffer?
             if (connection != null) {
-            connection.disconnect();
+                connection.disconnect();
+                connection = null;
             }
         }
-
+        return null;
     }
 
     private  String extractBoundary(String contentType) {
