@@ -133,9 +133,9 @@ public class SensorLimelight3ATest extends LinearOpMode {
             } else {
                 droppedFrames++;
             }
-            RobotLog.d("total frames = " + frames +"   Dropped frame = "+ droppedFrames);
+            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames);
 
-            sleep(100);
+//            sleep(10);
         }
 
     }

@@ -339,12 +339,13 @@ public class LimeLightImageTools {
     // from bytes to strings and non printable characters are messed up.
     // the do not convert back the same when passed to BitmapFactory
     public  Bitmap decodeMultipartImage(String urlString)  {
-        int GETREQUEST_TIMEOUT = 200;
-        int CONNECTION_TIMEOUT = 200;
+        int GETREQUEST_TIMEOUT = 100;
+        int CONNECTION_TIMEOUT = 100;
 
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setReadTimeout(GETREQUEST_TIMEOUT);
             connection.setConnectTimeout(CONNECTION_TIMEOUT);
@@ -352,18 +353,19 @@ public class LimeLightImageTools {
             String contentType = connection.getHeaderField("Content-Type");
             String boundary = extractBoundary(contentType);
             if (boundary == null) {
-                //throw new IOException("Boundary not found in Content-Type header");
+                RobotLog.d("LLIT boundary is NULL Exception - ");
+                return null;
             }
-            int length = connection.getContentLength();
-            String length2 = connection.getHeaderField("content-Length");
-            String contentType2 = connection.getContentType();
-            String contentEncoding = connection.getContentEncoding();
-
             return readImageFromStream(inputStream, boundary);
         } catch (Exception e) {
             RobotLog.d("LLIT decodeMultipartImage Exception - " + e );
             return null;
+        } finally {
+            if (connection != null) {
+            connection.disconnect();
+            }
         }
+
     }
 
     private  String extractBoundary(String contentType) {
@@ -377,58 +379,48 @@ public class LimeLightImageTools {
 
     private Bitmap readImageFromStream(InputStream inputStream, String boundary) {
         String marker = "--" + boundary;
-        String endMarker = marker + "--";
-        byte[] buffer = new byte[4096];
-        int bytesRead;
+        byte[] buffer = new byte[1000];
+        int bytesRead=0;
         StringBuilder data = new StringBuilder();
         Bitmap bmp = null;
 
         try {
             if (inputStream != null) {
-                int totalbytesRead =0;
                 bytesRead = inputStream.read(buffer);
-//                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    data.append(new String(buffer, 0, bytesRead));
-                    String dataString = data.toString();
-                    totalbytesRead += bytesRead;
-                    RobotLog.d("LLIT bytesRead= "+bytesRead + "  total="+totalbytesRead  );
-                    String LengthStringKey = "Content-Length: ";
-                    int sizeIndexStart = dataString.indexOf(LengthStringKey) + LengthStringKey.length();
-                    int sizeIndexEnd = dataString.indexOf("\r\n", sizeIndexStart);
-                    String sizeString = dataString.substring(sizeIndexStart, sizeIndexEnd);
-                    int size = Integer.parseInt(sizeString);
-                    int imageStart = dataString.indexOf("\r\n\r\n")+4;
-//                    byte[] byteBuffer = new byte[size];
-                    byte[] byteBuffer = Arrays.copyOfRange(buffer, imageStart, size+1000); // size is used to force new buffer size
-                    bytesRead -= imageStart; // remove the header bytes and start counting at image start.
+                data.append(new String(buffer, 0, bytesRead));
+                String dataString = data.toString();
+                String LengthStringKey = "Content-Length: ";
+                int sizeIndexStart = dataString.indexOf(LengthStringKey) + LengthStringKey.length();
+                int sizeIndexEnd = dataString.indexOf("\r\n", sizeIndexStart);
+                String sizeString = dataString.substring(sizeIndexStart, sizeIndexEnd);
+                int size = Integer.parseInt(sizeString);
+                int imageStart = dataString.indexOf("\r\n\r\n")+4;
+                byte[] byteBuffer = Arrays.copyOfRange(buffer, imageStart, size+1000); // size is used to force new buffer size
+                bytesRead -= imageStart; // remove the header bytes and start counting at image start.
 
-                    int i = 0;
-                    while (bytesRead < size && i != -1) {
-                        int numberToRead = Math.min(1024, size-bytesRead);
-                        i = inputStream.read(byteBuffer, bytesRead, numberToRead);
-                        bytesRead += i;
-                    }
+                int i = 0;
+                while (bytesRead < size && i != -1) {
+//                    int numberToRead = Math.min(4096, size-bytesRead);
+                    int numberToRead = size-bytesRead;
+                    i = inputStream.read(byteBuffer, bytesRead, numberToRead);
+                    bytesRead += i;
+                }
+                if (i==-1) {
+                    RobotLog.d("LLIT no more bytes to get" );
+                }
+
                 bmp = BitmapFactory.decodeStream(new ByteArrayInputStream(byteBuffer));
+                if (bmp==null) {
+                    RobotLog.d("LLIT bmp is null" );
+                }
                 return bmp;
 
-//                    if (imageStart != -1) {
-//                        String imageEndMarker = /*"\r\n" +*/ marker;
-//                        int imageEnd = dataString.indexOf(imageEndMarker, imageStart + 4);
-//                        if (imageEnd != -1) {
-//                            byte[] imageBytes = dataString.substring(imageStart + 4, imageEnd).getBytes();
-//                            bmp = BitmapFactory.decodeStream(new ByteArrayInputStream(imageBytes));
-//                            return bmp;
-//                        }
-//                    }
-
-//                }
-                //throw new IOException("LLIT Image data not found or incomplete!");
             } else {
                 RobotLog.d("LLIT readImageFromStream - input stream null" );
                 return bmp;
             }
         } catch (Exception e) {
-            RobotLog.d("LLIT readImageFromStream Exception - " + e );
+            RobotLog.d("LLIT readImageFromStream Exception byteRead="+bytesRead+"  e=" + e);
             //e.printStackTrace();
             return null;
         }
