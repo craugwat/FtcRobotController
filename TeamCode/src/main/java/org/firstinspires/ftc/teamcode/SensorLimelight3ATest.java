@@ -91,43 +91,56 @@ public class SensorLimelight3ATest extends LinearOpMode {
         waitForStart();
 
 
+        limelight.deleteSnapshots();
         LimeLightImageTools llIt = new LimeLightImageTools(limelight);
-
-
-//        while (opModeIsActive()) {
-//            llIt.sendNewSnapshotToDashboard();
-//            telemetry.update();
-//            sleep(100);
-//        }
-
         FtcDashboard dashboard = FtcDashboard.getInstance();
-        while (opModeIsActive()) {
-            Bitmap bmp = llIt.getBMP(LimeLightImageTools.Source.PROCESSED);
-            if (bmp != null) {
-                FtcDashboard.getInstance().sendImage(bmp);
-            }
-        }
 
 
-//        int frames = 0;
-//        int droppedFrames = 0;
-//        long startTime = System.nanoTime();
+//        LimeLightImageTools.Source source = LimeLightImageTools.Source.PROCESSED;
 //        while (opModeIsActive()) {
-//            Bitmap bmp = llIt.getBMP(LimeLightImageTools.Source.PROCESSED);
+//            if(gamepad1.a) source = LimeLightImageTools.Source.SNAPSHOT;
+//            if(gamepad1.b) source = LimeLightImageTools.Source.RAW;
+//            if(gamepad1.x) source = LimeLightImageTools.Source.PROCESSED;
+//
+//            Bitmap bmp = llIt.getBMP(source);
 //            if (bmp != null) {
 //                FtcDashboard.getInstance().sendImage(bmp);
-//                frames++;
-//            } else {
-//                droppedFrames++;
 //            }
-//            long currentTime = System.nanoTime();
-//            double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
-//            double frameRate =  (double)frames/elapsedTimeSeconds;
-//
-//            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
-//
-////            sleep(10);
 //        }
+
+
+        int frames = 0;
+        int droppedFrames = 0;
+        long startTime = System.nanoTime();
+        LimeLightImageTools.Source sourcer = LimeLightImageTools.Source.PROCESSED;
+        LimeLightImageTools.Source sourcerOld = sourcer;
+        while (opModeIsActive()) {
+            if(gamepad1.a) sourcer = LimeLightImageTools.Source.SNAPSHOT;
+            if(gamepad1.b) sourcer = LimeLightImageTools.Source.RAW;
+            if(gamepad1.x) sourcer = LimeLightImageTools.Source.PROCESSED;
+            if (sourcer != sourcerOld) {
+                frames = 0;
+                droppedFrames = 0;
+                startTime = System.nanoTime();
+            }
+
+            Bitmap bmp = llIt.getBMP(sourcer);
+            if (bmp != null) {
+                FtcDashboard.getInstance().sendImage(bmp);
+                frames++;
+            } else {
+                droppedFrames++;
+            }
+            long currentTime = System.nanoTime();
+            double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
+            double frameRate =  (double)frames/elapsedTimeSeconds;
+
+            RobotLog.d("LLIT  " + sourcer + "  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
+
+            if (sourcer == LimeLightImageTools.Source.SNAPSHOT)
+                sleep(100);
+
+        }
 
     }
 }

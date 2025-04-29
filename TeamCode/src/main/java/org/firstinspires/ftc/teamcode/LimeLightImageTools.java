@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.RobotLog;
 
@@ -47,11 +46,14 @@ public class LimeLightImageTools {
         }
     }
 
-    public boolean sendNewSnapshotToDashboard() {
+    public Bitmap getSnapShotBMP() {
         String snapShotName = "snapshot";
-        FtcDashboard dashboard = FtcDashboard.getInstance();
 
         boolean captured = limeLight.captureSnapshot(snapShotName);
+
+        // todo just a test to see if a time delay reduces drops
+        long startTime = System.currentTimeMillis();
+        while (startTime+40>System.currentTimeMillis());
 
         JSONObject obj = snapshotManifest();
         String snapShotFullName ="";
@@ -60,18 +62,18 @@ public class LimeLightImageTools {
             try {
                 snapShotFullName = findFullName(obj, snapShotName);
             } catch (JSONException e) {
-                return false;
+                RobotLog.d("LLIT getSnapShotBMP findFullName failed" );
+                return null;
             }
             if (snapShotFullName != "") {
                 Bitmap snapShot = getBitmapFromSnapShot(snapShotFullName);
                 if (snapShot != null) {
-                    dashboard.sendImage(snapShot);
                     limeLight.deleteSnapshots();
-                    return true;
+                    return snapShot;
                 }
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -81,7 +83,8 @@ public class LimeLightImageTools {
      * @return A Bitmap image if we get it from limelight, or return null
      */
     public Bitmap getBitmapFromSnapShot(String fileName) {
-        String imageUrl = "http://172.29.0.1:5801/snapshots/" + fileName; // Replace with your image URL
+//        String imageUrl = "http://172.29.0.1:5801/snapshots/" + fileName; // Replace with your image URL
+        String imageUrl = baseUrl + ":5801/snapshots/" + fileName; // Replace with your image URL
         try {
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -115,6 +118,8 @@ public class LimeLightImageTools {
                 }
             }
         } catch (JSONException e) {
+            RobotLog.d("LLIT findFullName Exception - " + e );
+
             return "";
         }
         return "";
@@ -127,14 +132,12 @@ public class LimeLightImageTools {
      */
     public JSONObject sendGetRequest (String endpoint) {
 
-        // todo  fix this baseUrl (debug and see what it is in the Limelight3A.java
-        String baseUrl = "http://172.29.0.1:5807";
         int GETREQUEST_TIMEOUT = 100;
         int CONNECTION_TIMEOUT = 100;
 
         HttpURLConnection connection = null;
         try {
-            String urlString = baseUrl + endpoint;
+            String urlString = baseUrl + ":5807" + endpoint;
             URL url = new URL(urlString);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
@@ -156,6 +159,7 @@ public class LimeLightImageTools {
                 System.out.println("HTTP GET Error: " + responseCode);
             }
         } catch (Exception e) {
+            RobotLog.d("LLIT sendGetRequest Exception - " + e );
             //e.printStackTrace();
         } finally {
             if (connection != null) {
@@ -201,6 +205,7 @@ public class LimeLightImageTools {
             new JSONObject(jsonString);
             return true;
         } catch (JSONException e) {
+//            RobotLog.d("LLIT isValidJson Exception - " + e );
             return false;
         }
     }
@@ -219,6 +224,7 @@ public class LimeLightImageTools {
         try {
             snapShotFullName = findFullName(obj, snapShotName);
         } catch (JSONException e) {
+            RobotLog.d("LLIT del Exception - " + e );
             snapShotFullName = "";
         }
 
@@ -240,18 +246,25 @@ public class LimeLightImageTools {
 
     // ***  Begin access pictures like the webpage does when PC plugged into camera  ***
     public enum Source {
+        SNAPSHOT,
         RAW,
         PROCESSED
     }
     HttpURLConnection connection = null;
-    public  Bitmap getBMP(Source source)  {
-        String port = "";
-        if (connection == null) {
-            switch (source) {
-                case RAW:       port = ":5802"; break;
-                case PROCESSED: port = ":5800"; break;
-            }
+    public Bitmap getBMP(Source source){
+        switch (source) {
+            case SNAPSHOT:
+                return getSnapShotBMP();
+            case RAW:
+                return getMultiPartBMP(":5802");
+            case PROCESSED:
+                return getMultiPartBMP(":5800");
+        }
+        return null;
+    }
 
+    public  Bitmap getMultiPartBMP(String port)  {
+        if (connection == null) {
             connection = openConnection(baseUrl + port);
         }
         try {
