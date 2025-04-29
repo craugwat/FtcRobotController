@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.MediaRecorder;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -16,15 +15,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
+import java.net.InetAddress;
 import java.net.URL;
 import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,13 +28,26 @@ import java.util.regex.Pattern;
 public class LimeLightImageTools {
     Limelight3A limeLight;
 
+    private String baseUrl = "0.0.0.0";
+
+
 
 
     LimeLightImageTools(Limelight3A limeLight) {
         this.limeLight = limeLight;
+        try {
+            Field privatIPaddress = Limelight3A.class.getDeclaredField("inetAddress");
+            privatIPaddress.setAccessible(true);
+            InetAddress ipAddress = (InetAddress) privatIPaddress.get(limeLight);
+            InetAddress inetAddress = ipAddress;
+            assert ipAddress != null;
+            this.baseUrl = "http://" + ipAddress.getHostAddress();
+        } catch (Exception e) {
+            RobotLog.d("LLIT Failed to get IP address" );
+        }
     }
 
-    public boolean SendNewSnapshotToDashboard() {
+    public boolean sendNewSnapshotToDashboard() {
         String snapShotName = "snapshot";
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
@@ -73,7 +82,6 @@ public class LimeLightImageTools {
      */
     public Bitmap getBitmapFromSnapShot(String fileName) {
         String imageUrl = "http://172.29.0.1:5801/snapshots/" + fileName; // Replace with your image URL
-//        String imageUrl = "http://172.29.0.1:5800";
         try {
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -229,145 +237,24 @@ public class LimeLightImageTools {
         RobotLog.d("LLIT manifest= ", obj);
     }
 
-    // this worked and saved a file onto the control hub.
-    // I then was able to open the file in a hex editor, search for
-    // JPG begin signatures = FFD8FF an jpg trailer = FFD9.
-    // i copied the bytes from begin to end signatures and saved in a new file
-    // this new file opened as a viewable jpg! So the jpg is in there!
-    private String readResponse4(HttpURLConnection connection) throws IOException {
-        InputStream is = connection.getInputStream();
-        int cnt = 0;
-        RobotLog.d("LLIT4 cnt=" + cnt );
-        try (OutputStream outputStream = new FileOutputStream("/sdcard/FIRST/CW8620")) {
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-//                outputStream.write(buffer, 0, bytesRead);
-                cnt += bytesRead;
-                RobotLog.d("LLIT4a cnt=" + cnt );
-            }
-        }
-        RobotLog.d("LLIT4b cnt=" + cnt );
-        return "";
+
+    // ***  Begin access pictures like the webpage does when PC plugged into camera  ***
+    public enum Source {
+        RAW,
+        PROCESSED
     }
-
-    // This is NOT optimized for streams!!!
-    // I'm doing single byte reads and tests from the input streams!
-    // BUT IT WORKS!
-    enum STATES {start1, start2, start3, body, end1, done};
-    public boolean streamToDashboard () {
-        // todo  fix this baseUrl (debug and see what it is in the Limelight3A.java
-        String baseUrl = "http://172.29.0.1:5800";
-        int GETREQUEST_TIMEOUT = 100;
-        int CONNECTION_TIMEOUT = 100;
-        STATES state = STATES.start1;
-        boolean retValue = false;
-
-        HttpURLConnection connection = null;
-        try {
-            String urlString = baseUrl;// + endpoint;
-            URL url = new URL(urlString);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setReadTimeout(GETREQUEST_TIMEOUT);
-            connection.setConnectTimeout(CONNECTION_TIMEOUT);
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-
-                InputStream is = connection.getInputStream();
-                int cnt = 0;
-
-                int bufferSize = 200000;
-                byte[] buffer = new byte[bufferSize];
-                int theByte;
-                int index = 0;
-                while ( (theByte = is.read()) != -1 && state != STATES.done) {
-                    switch (state) {
-                        case start1:
-                            if (theByte == 0xFF)
-                                state = STATES.start2;
-                            break;
-                        case start2:
-                            if (theByte == 0xD8)
-                                state = STATES.start3;
-                            else
-                                state = STATES.start1;
-                            break;
-                        case start3:
-                            if (theByte == 0xFF)
-                                state = STATES.body;
-                            else
-                                state = STATES.start1;
-                            break;
-                        case body:
-                            if (theByte == 0xFF)
-                                state = STATES.end1;
-                            break;
-                        case end1:
-                            if (theByte == 0xD9)
-                                state = STATES.done;
-                            else
-                                state = STATES.body;
-                            break;
-                    }
-                    if (state != STATES.start1 && index<bufferSize) {
-                        buffer[index++] = (byte)theByte;
-                    }
-                }
-
-                RobotLog.d("LLIT streamToDashboard done. index= " + index );
-                Bitmap bmp = BitmapFactory.decodeByteArray(buffer,0,index);
-                FtcDashboard.getInstance().sendImage(bmp);
-                retValue = true;
-
-            } else {
-                RobotLog.d("LLIT HTTP GET Error =  " + responseCode );
-            }
-        } catch (Exception e) {
-            RobotLog.d("LLIT   Exception=  " + e );
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-        return retValue;
-    }
-
-
-    // ***  Begin attempt for more optimized stream access  ***
-    private HttpURLConnection openConnection(String urlString) {
-        int GETREQUEST_TIMEOUT = 100;
-        int CONNECTION_TIMEOUT = 100;
-
-        HttpURLConnection connection = null;
-        try {
-            URL url = new URL(urlString);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setReadTimeout(GETREQUEST_TIMEOUT);
-            connection.setConnectTimeout(CONNECTION_TIMEOUT);
-            return connection;
-        } catch (Exception e) {
-            RobotLog.d("LLIT openConnection Exception - " + e );
-        }
-        return null;
-    }
-
     HttpURLConnection connection = null;
-    public  Bitmap decodeMultipartImage(String urlString)  {
-        int GETREQUEST_TIMEOUT = 100;
-        int CONNECTION_TIMEOUT = 100;
-
+    public  Bitmap getBMP(Source source)  {
+        String port = "";
         if (connection == null) {
-            connection = openConnection(urlString);
+            switch (source) {
+                case RAW:       port = ":5802"; break;
+                case PROCESSED: port = ":5800"; break;
+            }
+
+            connection = openConnection(baseUrl + port);
         }
         try {
-//            URL url = new URL(urlString);
-//            connection = (HttpURLConnection) url.openConnection();
-//            connection.setRequestMethod("GET");
-//            connection.setReadTimeout(GETREQUEST_TIMEOUT);
-//            connection.setConnectTimeout(CONNECTION_TIMEOUT);
             if (connection != null) {
                 InputStream inputStream = connection.getInputStream();
                 String contentType = connection.getHeaderField("Content-Type");
@@ -382,17 +269,28 @@ public class LimeLightImageTools {
             RobotLog.d("LLIT decodeMultipartImage Exception - " + e );
             return null;
         } finally {
-            //  frame rate can be increased by not closing the conneciton, but
-            // the server keeps sending images and they pile up in the inputStream causing lag!
-            // quick test, not closing doubled frame rate, but caused 2 seconds of lag.
-            // this also caused dropped frames, beacuse code is not searching for the
-            // begining of the header each time through.
-            // could check the inputStream size and skip towards the end and look for the header
-            // info to get the last full jpg that is in the buffer?
             if (connection != null) {
                 connection.disconnect();
                 connection = null;
             }
+        }
+        return null;
+    }
+
+    private HttpURLConnection openConnection(String urlString) {
+        int GETREQUEST_TIMEOUT = 100;
+        int CONNECTION_TIMEOUT = 100;
+
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(urlString);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setReadTimeout(GETREQUEST_TIMEOUT);
+            connection.setConnectTimeout(CONNECTION_TIMEOUT);
+            return connection;
+        } catch (Exception e) {
+            RobotLog.d("LLIT openConnection Exception - " + e );
         }
         return null;
     }
@@ -429,7 +327,6 @@ public class LimeLightImageTools {
 
                 int i = 0;
                 while (bytesRead < size && i != -1) {
-//                    int numberToRead = Math.min(4096, size-bytesRead);
                     int numberToRead = size-bytesRead;
                     i = inputStream.read(byteBuffer, bytesRead, numberToRead);
                     bytesRead += i;
@@ -454,6 +351,6 @@ public class LimeLightImageTools {
             return null;
         }
     }
-    // ***  Begin attempt for more optimized stream access   ***
+    // ***  End access pictures like the webpage does when plugged into camera  ***
 
 }

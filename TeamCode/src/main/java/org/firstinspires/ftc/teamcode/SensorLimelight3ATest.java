@@ -40,18 +40,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import org.firstinspires.ftc.robotcore.external.stream.CameraStreamClient;
-import org.firstinspires.ftc.robotcore.external.stream.CameraStreamServer;
-import org.firstinspires.ftc.robotcore.external.stream.CameraStreamSource;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.opencv.videoio.VideoCapture;
-import org.openftc.easyopencv.OpenCvCamera;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.Timer;
-
 
 /*
  * This OpMode illustrates how to use the Limelight3A Vision Sensor.
@@ -81,6 +69,7 @@ public class SensorLimelight3ATest extends LinearOpMode {
 
     private Limelight3A limelight;
 
+
     @Override
     public void runOpMode() throws InterruptedException
     {
@@ -96,16 +85,8 @@ public class SensorLimelight3ATest extends LinearOpMode {
         limelight.start();
         limelight.deleteSnapshots();
         telemetry.addData(">", "Robot Ready.  Press Play.");
-//        telemetry.addData(">", limelight.getConnectionInfo());
         telemetry.update();
 
-//        try {
-//            portForward.portForward();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//        telemetry.addData(">", "port forward started");
-//        telemetry.update();
 
         waitForStart();
 
@@ -114,35 +95,39 @@ public class SensorLimelight3ATest extends LinearOpMode {
 
 
 //        while (opModeIsActive()) {
-//            llIt.SendNewSnapshotToDashboard();
+//            llIt.sendNewSnapshotToDashboard();
 //            telemetry.update();
 //            sleep(100);
 //        }
 
-//        while (opModeIsActive()) {
-//            llIt.streamToDashboard();
-//            sleep(100);
-//        }
-
-        int frames = 0;
-        int droppedFrames = 0;
-        long startTime = System.nanoTime();
+        FtcDashboard dashboard = FtcDashboard.getInstance();
         while (opModeIsActive()) {
-            Bitmap bmp = llIt.decodeMultipartImage("http://172.29.0.1:5800");
+            Bitmap bmp = llIt.getBMP(LimeLightImageTools.Source.PROCESSED);
             if (bmp != null) {
                 FtcDashboard.getInstance().sendImage(bmp);
-                frames++;
-            } else {
-                droppedFrames++;
             }
-            long currentTime = System.nanoTime();
-            double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
-            double frameRate =  (double)frames/elapsedTimeSeconds;
-
-            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
-
-//            sleep(10);
         }
+
+
+//        int frames = 0;
+//        int droppedFrames = 0;
+//        long startTime = System.nanoTime();
+//        while (opModeIsActive()) {
+//            Bitmap bmp = llIt.getBMP(LimeLightImageTools.Source.PROCESSED);
+//            if (bmp != null) {
+//                FtcDashboard.getInstance().sendImage(bmp);
+//                frames++;
+//            } else {
+//                droppedFrames++;
+//            }
+//            long currentTime = System.nanoTime();
+//            double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
+//            double frameRate =  (double)frames/elapsedTimeSeconds;
+//
+//            RobotLog.d("LLIT  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
+//
+////            sleep(10);
+//        }
 
     }
 }
