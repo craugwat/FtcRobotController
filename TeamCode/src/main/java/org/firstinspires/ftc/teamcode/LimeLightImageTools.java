@@ -17,6 +17,8 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URL;
 import java.io.*;
 import java.util.Arrays;
@@ -27,7 +29,8 @@ import java.util.regex.Pattern;
 public class LimeLightImageTools {
     Limelight3A limeLight;
 
-    private String baseUrl = "0.0.0.0";
+    private String baseUrl = "http://0.0.0.0";
+    private String ip = "0.0.0.0";
 
 
 
@@ -41,6 +44,7 @@ public class LimeLightImageTools {
             InetAddress inetAddress = ipAddress;
             assert ipAddress != null;
             this.baseUrl = "http://" + ipAddress.getHostAddress();
+            this.ip = ipAddress.getHostAddress();
         } catch (Exception e) {
             RobotLog.d("LLIT Failed to get IP address" );
         }
@@ -157,6 +161,8 @@ public class LimeLightImageTools {
                 }
             } else {
                 System.out.println("HTTP GET Error: " + responseCode);
+                RobotLog.d("LLIT sendGetRequest HTTP GET Error: " + responseCode);
+
             }
         } catch (Exception e) {
             RobotLog.d("LLIT sendGetRequest Exception - " + e );
@@ -250,7 +256,6 @@ public class LimeLightImageTools {
         RAW,
         PROCESSED
     }
-    HttpURLConnection connection = null;
     public Bitmap getBMP(Source source){
         switch (source) {
             case SNAPSHOT:
@@ -264,9 +269,7 @@ public class LimeLightImageTools {
     }
 
     public  Bitmap getMultiPartBMP(String port)  {
-        if (connection == null) {
-            connection = openConnection(baseUrl + port);
-        }
+        HttpURLConnection connection = openConnection(baseUrl + port);
         try {
             if (connection != null) {
                 InputStream inputStream = connection.getInputStream();
@@ -284,7 +287,6 @@ public class LimeLightImageTools {
         } finally {
             if (connection != null) {
                 connection.disconnect();
-                connection = null;
             }
         }
         return null;
@@ -366,4 +368,76 @@ public class LimeLightImageTools {
     }
     // ***  End access pictures like the webpage does when plugged into camera  ***
 
+
+    // ***  Start try to do port forwarding through so can configure limelight through control hub
+    public void portForwarding() {
+        int localPort = 8620; // Port to listen on
+        String remoteHost = ip; //"remote_host"; // Host to forward to
+        int remotePort = 5800; // Port on remote host to forward to
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(localPort);
+            System.out.println("Listening on port " + localPort);
+            RobotLog.d("LLIT portForwarding Listening on port " + localPort);
+
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Accepted connection from " + clientSocket.getInetAddress());
+                RobotLog.d("LLIT portForwarding Accepted connection from " + clientSocket.getInetAddress());
+
+                Thread forwardThread = new Thread(() -> {
+                    try {
+                        Socket remoteSocket = new Socket(remoteHost, remotePort);
+                        System.out.println("Connected to remote host " + remoteHost + ":" + remotePort);
+                        RobotLog.d("LLIT portForwarding Connected to remote host " + remoteHost + ":" + remotePort);
+
+                        // Start threads to forward data in both directions
+                        startForwarding(clientSocket.getInputStream(), remoteSocket.getOutputStream());
+                        startForwarding(remoteSocket.getInputStream(), clientSocket.getOutputStream());
+
+                    } catch (IOException e) {
+                        System.err.println("Error forwarding: " + e.getMessage());
+                        RobotLog.d("LLIT portForwarding Error forwarding: " + e.getMessage());
+
+                    } finally {
+//                        try {
+//                            clientSocket.close();
+//                            RobotLog.d("LLIT portForwarding client Socket Closed");
+//                        } catch (IOException e) {
+//                            // Ignore
+//                        }
+                    }
+                });
+                forwardThread.start();
+            }
+        } catch (IOException e) {
+            System.err.println("Error starting server: " + e.getMessage());
+            RobotLog.d("LLIT portForwarding Error starting server: " + e.getMessage());
+
+        }
+    }
+
+    private static void startForwarding(InputStream input, OutputStream output) {
+        Thread thread = new Thread(() -> {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            try {
+                while ((bytesRead = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, bytesRead);
+                    output.flush();
+                }
+            } catch (IOException e) {
+                // Connection probably closed
+            } finally {
+                try {
+                    output.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
+        });
+        thread.start();
+    }
+    // ***  end try to do port forwarding through so can configure limelight through control hub
 }

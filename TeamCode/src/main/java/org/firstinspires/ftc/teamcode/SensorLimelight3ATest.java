@@ -95,6 +95,8 @@ public class SensorLimelight3ATest extends LinearOpMode {
         LimeLightImageTools llIt = new LimeLightImageTools(limelight);
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
+        llIt.portForwarding();
+
 
 //        LimeLightImageTools.Source source = LimeLightImageTools.Source.PROCESSED;
 //        while (opModeIsActive()) {
