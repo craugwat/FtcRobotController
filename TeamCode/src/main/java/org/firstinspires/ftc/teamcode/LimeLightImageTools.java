@@ -371,15 +371,15 @@ public class LimeLightImageTools {
 
     // ***  Start try to do port forwarding through so can configure limelight through control hub
     // TODO  this is working!
-    //   - Need a propery way to shut down threads
+    //   - Need a propery way to shut down threads, or do they terminate and get cleaned up.
     //   - revisit if and when we need to clientSocket.close()
     //   - and finalClientSocket is not optimal solutions, from compiler's suggestion.
     //   - look at outputclose in startForwarding()
 
-    public void portForwarding() {
-        int localPort = 5800; // Port to listen on
+    public void portForwarding(int port) {
+        int localPort = port; // Port to listen on
         String remoteHost = ip; //"remote_host"; // Host to forward to
-        int remotePort = 5800; // Port on remote host to forward to
+        int remotePort = port; // Port on remote host to forward to
 
         try {
             ServerSocket serverSocket = new ServerSocket(localPort);
@@ -387,37 +387,36 @@ public class LimeLightImageTools {
             RobotLog.d("LLIT portForwarding Listening on port " + localPort);
 
 
-            Thread listenThread = new Thread(() ->{
+            Thread listenThread = new Thread(() ->{  // this thread continously listens for new connections to the server.
 
                 while (true) {
-                    RobotLog.d("LLIT portForwarding waiting for client on " + localPort);
+                    RobotLog.d("LLIT portForwarding " + port + " waiting for client on " + localPort);
                     Socket clientSocket = null;
                     try {
-                        clientSocket = serverSocket.accept();
+                        clientSocket = serverSocket.accept();   // waits for client to request the port
                     } catch (IOException e) {
-                        throw new RuntimeException(e);
+                        RobotLog.d("LLIT portForwarding " + port + " no client Socket");
                     }
                     System.out.println("Accepted connection from " + clientSocket.getInetAddress());
-                    RobotLog.d("LLIT portForwarding Accepted connection from " + clientSocket.getInetAddress());
+                    RobotLog.d("LLIT portForwarding " + port + " Accepted connection from " + clientSocket.getInetAddress());
 
                     Socket finalClientSocket = clientSocket;
                     Thread forwardThread = new Thread(() -> {
                         try {
                             Socket remoteSocket = new Socket(remoteHost, remotePort);
                             System.out.println("Connected to remote host " + remoteHost + ":" + remotePort);
-                            RobotLog.d("LLIT portForwarding Connected to remote host " + remoteHost + ":" + remotePort);
+                            RobotLog.d("LLIT portForwarding " + port + " Connected to remote host " + remoteHost + ":" + remotePort);
 
                             // Start threads to forward data in both directions
-                            startForwarding(finalClientSocket.getInputStream(), remoteSocket.getOutputStream());
-                            startForwarding(remoteSocket.getInputStream(), finalClientSocket.getOutputStream());
+                            startForwarding(finalClientSocket.getInputStream(), remoteSocket.getOutputStream(), "client:"+port);  // starts thread for client to remote
+                            startForwarding(remoteSocket.getInputStream(), finalClientSocket.getOutputStream(), "host:"+port);  // starts thread for remote to client
 
                         } catch (IOException e) {
-                            System.err.println("Error forwarding: " + e.getMessage());
-                            RobotLog.d("LLIT portForwarding Error forwarding: " + e.getMessage());
+                            RobotLog.d("LLIT portForwarding " + port + " Error forwarding: " + e.getMessage());
 
                         } finally {
 //                        try {
-//                            clientSocket.close();
+//                            finalClientSocket.close();
 //                            RobotLog.d("LLIT portForwarding client Socket Closed");
 //                        } catch (IOException e) {
 //                            // Ignore
@@ -429,13 +428,11 @@ public class LimeLightImageTools {
             });
             listenThread.start();
         } catch (IOException e) {
-            System.err.println("Error starting server: " + e.getMessage());
-            RobotLog.d("LLIT portForwarding Error starting server: " + e.getMessage());
-
+            RobotLog.d("LLIT portForwarding " + port + " Error starting server: " + e.getMessage());
         }
     }
 
-    private static void startForwarding(InputStream input, OutputStream output) {
+    private static void startForwarding(InputStream input, OutputStream output, String name) {
         Thread thread = new Thread(() -> {
             byte[] buffer = new byte[4096];
             int bytesRead;
@@ -449,7 +446,7 @@ public class LimeLightImageTools {
                 } finally {
                     try {
                         output.close();
-                        RobotLog.d("LLIT startForwarding closed");
+                        RobotLog.d("LLIT startForwarding closed, "+name);
                     } catch (IOException e) {
                         // Ignore
                     }
@@ -457,5 +454,21 @@ public class LimeLightImageTools {
         });
         thread.start();
     }
+
+    // Forward all ports needed to get full use of the limelight web interface to do configuration
+    // changes while connected to the robot controller
+    public void forwardAll() {
+        portForwarding(5800);
+        portForwarding(5801);
+        portForwarding(5802);
+        portForwarding(5805);
+    }
+
+    public void forwardProcessedStream(){
+        portForwarding(5800);
+    }
+
+
     // ***  end try to do port forwarding through so can configure limelight through control hub
+
 }

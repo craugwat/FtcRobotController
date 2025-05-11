@@ -95,7 +95,15 @@ public class SensorLimelight3ATest extends LinearOpMode {
         LimeLightImageTools llIt = new LimeLightImageTools(limelight);
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
-        llIt.portForwarding();
+
+        // todo don't need all these.  Trying to get the java script buttons to work on 5801 the main screen.
+//        llIt.portForwarding(53);
+//        llIt.portForwarding(22);
+        llIt.forwardAll();
+//        llIt.portForwarding(5800);
+//        llIt.portForwarding(5801);
+//        llIt.portForwarding(5802);
+//        llIt.portForwarding(5805);
 
 
 //        LimeLightImageTools.Source source = LimeLightImageTools.Source.PROCESSED;
@@ -137,7 +145,7 @@ public class SensorLimelight3ATest extends LinearOpMode {
             double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
             double frameRate =  (double)frames/elapsedTimeSeconds;
 
-            RobotLog.d("LLIT  " + sourcer + "  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
+            RobotLog.d("LL_Test  " + sourcer + "  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
 
             if (sourcer == LimeLightImageTools.Source.SNAPSHOT)
                 sleep(100);
