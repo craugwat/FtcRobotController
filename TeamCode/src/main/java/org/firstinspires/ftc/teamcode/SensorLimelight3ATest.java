@@ -41,27 +41,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.RobotLog;
 
 
-/*
- * This OpMode illustrates how to use the Limelight3A Vision Sensor.
- *
- * @see <a href="https://limelightvision.io/">Limelight</a>
- *
- * Notes on configuration:
- *
- *   The device presents itself, when plugged into a USB port on a Control Hub as an ethernet
- *   interface.  A DHCP server running on the Limelight automatically assigns the Control Hub an
- *   ip address for the new ethernet interface.
- *
- *   Since the Limelight is plugged into a USB port, it will be listed on the top level configuration
- *   activity along with the Control Hub Portal and other USB devices such as webcams.  Typically
- *   serial numbers are displayed below the device's names.  In the case of the Limelight device, the
- *   Control Hub's assigned ip address for that ethernet interface is used as the "serial number".
- *
- *   Tapping the Limelight's name, transitions to a new screen where the user can rename the Limelight
- *   and specify the Limelight's ip address.  Users should take care not to confuse the ip address of
- *   the Limelight itself, which can be configured through the Limelight settings page via a web browser,
- *   and the ip address the Limelight device assigned the Control Hub and which is displayed in small text
- *   below the name of the Limelight on the top level configuration screen.
+/**
+ * This OpMode illustrates how to use the LimelightImageTools
  */
 @TeleOp(name = "Sensor: Limelight3A", group = "Sensor")
 //@Disabled
@@ -96,45 +77,31 @@ public class SensorLimelight3ATest extends LinearOpMode {
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
 
-        // todo don't need all these.  Trying to get the java script buttons to work on 5801 the main screen.
-//        llIt.portForwarding(53);
-//        llIt.portForwarding(22);
-        llIt.forwardAll();
-//        llIt.portForwarding(5800);
-//        llIt.portForwarding(5801);
-//        llIt.portForwarding(5802);
-//        llIt.portForwarding(5805);
-
-
-//        LimeLightImageTools.Source source = LimeLightImageTools.Source.PROCESSED;
-//        while (opModeIsActive()) {
-//            if(gamepad1.a) source = LimeLightImageTools.Source.SNAPSHOT;
-//            if(gamepad1.b) source = LimeLightImageTools.Source.RAW;
-//            if(gamepad1.x) source = LimeLightImageTools.Source.PROCESSED;
-//
-//            Bitmap bmp = llIt.getBMP(source);
-//            if (bmp != null) {
-//                FtcDashboard.getInstance().sendImage(bmp);
-//            }
-//        }
-
+        llIt.forwardAll();  // forward ports to allow remote communication with the limelight
 
         int frames = 0;
         int droppedFrames = 0;
+        boolean showProcessedImage = true;
+        boolean lastAButton = false; // Store the state of the A button from the previous cycle
+
         long startTime = System.nanoTime();
-        LimeLightImageTools.Source sourcer = LimeLightImageTools.Source.PROCESSED;
-        LimeLightImageTools.Source sourcerOld = sourcer;
+
         while (opModeIsActive()) {
-            if(gamepad1.a) sourcer = LimeLightImageTools.Source.SNAPSHOT;
-            if(gamepad1.b) sourcer = LimeLightImageTools.Source.RAW;
-            if(gamepad1.x) sourcer = LimeLightImageTools.Source.PROCESSED;
-            if (sourcer != sourcerOld) {
+            if (gamepad1.a && !lastAButton) {
+                showProcessedImage = !showProcessedImage;
                 frames = 0;
                 droppedFrames = 0;
                 startTime = System.nanoTime();
             }
+            lastAButton = gamepad1.a;
 
-            Bitmap bmp = llIt.getBMP(sourcer);
+            Bitmap bmp;
+            if (showProcessedImage) {
+                bmp = llIt.getProcessedBMP();
+            } else {
+                bmp = llIt.getRawBMP();
+            }
+
             if (bmp != null) {
                 FtcDashboard.getInstance().sendImage(bmp);
                 frames++;
@@ -145,11 +112,8 @@ public class SensorLimelight3ATest extends LinearOpMode {
             double elapsedTimeSeconds = (currentTime - startTime) / 1_000_000_000.0;
             double frameRate =  (double)frames/elapsedTimeSeconds;
 
-            RobotLog.d("LL_Test  " + sourcer + "  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
-
-            if (sourcer == LimeLightImageTools.Source.SNAPSHOT)
-                sleep(100);
-
+            RobotLog.d("LL_Test  " + (showProcessedImage ? "Processed":"Raw") + "  good frames = " + frames +"   Dropped frame = "+ droppedFrames + " Frame/second="+ frameRate);
+//            telemetry.addData("BMP", bmp);
         }
 
     }
