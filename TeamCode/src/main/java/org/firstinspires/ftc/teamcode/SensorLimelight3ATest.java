@@ -35,6 +35,7 @@ package org.firstinspires.ftc.teamcode;
 import android.graphics.Bitmap;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.example.limelighttools.LimeLightImageTools;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -69,15 +70,12 @@ public class SensorLimelight3ATest extends LinearOpMode {
         telemetry.update();
 
 
-        waitForStart();
-
-
-        limelight.deleteSnapshots();
-        LimeLightImageTools llIt = new LimeLightImageTools(limelight);
-        FtcDashboard dashboard = FtcDashboard.getInstance();
-
+        // LimeLightImageTools llIt = new LimeLightImageTools(limelight);
+        LimeLightImageTools llIt = new LimeLightImageTools("172.29.0.1");
 
         llIt.forwardAll();  // forward ports to allow remote communication with the limelight
+
+        waitForStart();
 
         int frames = 0;
         int droppedFrames = 0;

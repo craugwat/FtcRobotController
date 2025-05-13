@@ -1,10 +1,11 @@
-package org.firstinspires.ftc.teamcode;
+package com.example.limelighttools;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.RobotLog;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,27 +26,33 @@ import java.util.regex.Pattern;
  */
 public class LimeLightImageTools {
     Limelight3A limeLight;
-
-    private String baseUrl = "http://0.0.0.0";
-    private String ip = "0.0.0.0";
+    private String ipAddress = "0.0.0.0";
 
 
     /**
      *
      * @param limeLight  sensor to be accessed by this class
      */
-    LimeLightImageTools(Limelight3A limeLight) {
+    public LimeLightImageTools(Limelight3A limeLight) {
         this.limeLight = limeLight;
         try {
             Field privatIPaddress = Limelight3A.class.getDeclaredField("inetAddress");
             privatIPaddress.setAccessible(true);
-            InetAddress ipAddress = (InetAddress) privatIPaddress.get(limeLight);
-            assert ipAddress != null;
-            this.baseUrl = "http://" + ipAddress.getHostAddress();
-            this.ip = ipAddress.getHostAddress();
+            InetAddress ipAddr = (InetAddress) privatIPaddress.get(limeLight);
+            assert ipAddr != null;
+            this.ipAddress = ipAddr.getHostAddress();
         } catch (Exception e) {
             RobotLog.d("LLIT Failed to get IP address" );
         }
+    }
+
+    /**
+     * An alternate consturor that uses a provided IP address rather than getting it from the limelight.
+     * This should work without needed dependencies on the FTC sdk for this library
+     * @param ipAddr  String containing the Ip address of the limelight.  Typically "172.29.0.1" verify in robot config
+     */
+    public LimeLightImageTools(String ipAddr) {
+        this.ipAddress = ipAddr;
     }
 
     // ***  Begin access images like the webpage does when PC plugged into camera  ***
@@ -75,7 +82,7 @@ public class LimeLightImageTools {
      * @return the requested image as a Bitmap
      */
     public  Bitmap getMultiPartBMP(String port)  {
-        HttpURLConnection connection = openConnection(baseUrl + port);
+        HttpURLConnection connection = openConnection("http://" + ipAddress + port);
         try {
             if (connection != null) {
                 InputStream inputStream = connection.getInputStream();
@@ -207,7 +214,7 @@ public class LimeLightImageTools {
      */
     public void portForwarding(int port) {
         int localPort = port; // Port to listen on
-        String remoteHost = ip; //"remote_host"; // Host to forward to
+        String remoteHost = ipAddress; //"remote_host"; // Host to forward to
         int remotePort = port; // Port on remote host to forward to
 
         try {
