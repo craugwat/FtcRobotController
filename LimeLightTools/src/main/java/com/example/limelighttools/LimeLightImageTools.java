@@ -7,6 +7,11 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.util.RobotLog;
 
 
+import org.firstinspires.ftc.robotcore.external.function.Consumer;
+import org.firstinspires.ftc.robotcore.external.function.Continuation;
+import org.firstinspires.ftc.robotcore.external.stream.CameraStreamServer;
+import org.firstinspires.ftc.robotcore.external.stream.CameraStreamSource;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -28,6 +33,28 @@ public class LimeLightImageTools {
     Limelight3A limeLight;
     private String ipAddress = "0.0.0.0";
 
+    public LimeLightCameraStreamSource streamSource;
+
+
+
+    public static class LimeLightCameraStreamSource implements CameraStreamSource {
+
+        private String ipAddress;
+
+        public LimeLightCameraStreamSource(String ipAddr) {
+            ipAddress = ipAddr;
+        }
+
+        @Override
+        public void getFrameBitmap(Continuation<? extends Consumer<Bitmap>> continuation) {
+            // Convert BufferedImage to Bitmap and pass it to the consumer
+            LimeLightImageTools llIt = new LimeLightImageTools(ipAddress);
+            Bitmap bmpBitmap = llIt.getProcessedBMP();
+            continuation.dispatch(bmpBitmapConsumer -> bmpBitmapConsumer.accept(bmpBitmap));
+
+        }
+    }
+
 
     /**
      *
@@ -44,6 +71,7 @@ public class LimeLightImageTools {
         } catch (Exception e) {
             RobotLog.d("LLIT Failed to get IP address" );
         }
+        streamSource = new LimeLightCameraStreamSource(ipAddress);
     }
 
     /**
@@ -52,7 +80,10 @@ public class LimeLightImageTools {
      * @param ipAddr  String containing the Ip address of the limelight.  Typically "172.29.0.1" verify in robot config
      */
     public LimeLightImageTools(String ipAddr) {
+
         this.ipAddress = ipAddr;
+        streamSource = new LimeLightCameraStreamSource(ipAddress);
+
     }
 
     // ***  Begin access images like the webpage does when PC plugged into camera  ***
@@ -320,5 +351,22 @@ public class LimeLightImageTools {
 
 
     // ***  end try to do port forwarding through so can configure limelight through control hub
+
+    /**
+     * use the Limewire as a stream source for the driver station's "camera stream" during Init.
+     */
+    public void setDriverStationStreamSource() {
+        CameraStreamServer.getInstance().setSource(streamSource);
+    }
+
+    /**
+     * Get the stream Source to pass it to dashboard or other consumers.
+     * The stream is opened, one frame captured, and then closed.
+     * @return the limeLight's streaming source.
+     */
+    public LimeLightCameraStreamSource getStreamSource () {
+        return streamSource;
+    }
+
 
 }

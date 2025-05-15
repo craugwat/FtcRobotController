@@ -35,18 +35,12 @@ package org.firstinspires.ftc.teamcode;
 import android.graphics.Bitmap;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.example.limelighttools.LimeLightCameraStreamSource;
+//import com.example.limelighttools.LimeLightCameraStreamSource;
 import com.example.limelighttools.LimeLightImageTools;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.RobotLog;
-
-import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
-import org.firstinspires.ftc.robotcore.external.stream.CameraStreamServer;
-import org.firstinspires.ftc.vision.VisionPortal;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvWebcam;
 
 
 /**
@@ -82,9 +76,8 @@ public class SensorLimelight3ATest extends LinearOpMode {
 
         llIt.forwardAll();  // forward ports to allow remote communication with the limelight
 
-        LimeLightCameraStreamSource streamSource = new LimeLightCameraStreamSource();
-        FtcDashboard.getInstance().startCameraStream(streamSource,10);
-        CameraStreamServer.getInstance().setSource(streamSource);
+        FtcDashboard.getInstance().startCameraStream(llIt.getStreamSource(),10);
+        llIt.setDriverStationStreamSource();
 
         waitForStart();
 
